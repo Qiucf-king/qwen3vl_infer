@@ -1,4 +1,4 @@
-# Qwen3-VL 纯推理
+# Qwen3-VL 推理 + 训练
 
 目录必须和训练时一样，基座路径才是 `../../pretrain_model/Qwen3-VL-8B-Instruct`。
 
@@ -128,10 +128,18 @@ bash infer.sh
 
 ## 6. 把官方 train 转成训练数据
 
-官方 `train/` 只有 `label/*_label.json` 和 IQ，**没有**推理用的 2x2 mosaic png。  
-SFT 用的图必须和推理同一套：四节点 mosaic，文件名 `<stem>.png`，例如 `00000002_e149d585.png` 对应 `00000002_e149d585_label.json`。
+官方 `train/` 一般是：
 
-把 mosaic 放到一个目录（例如 `./spec_png/`），然后：
+```
+train/
+  label/
+    00000002_e149d585_label.json
+    ...
+  （IQ 原始数据，本仓库脚本不用）
+```
+
+SFT 要的图必须和推理同一套：四节点 2x2 mosaic，文件名 `<stem>.png`。  
+例如 `00000002_e149d585.png` 对应 `00000002_e149d585_label.json`。把这些 png 放到一个目录（例如 `./spec_png/`），然后：
 
 ```bash
 cd 2026wuxiandian/qwen3vl_infer
