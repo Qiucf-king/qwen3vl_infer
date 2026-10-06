@@ -1,0 +1,15 @@
+__pycache__/
+.cache/
+submits/
+logs/
+*.pyc
+infer_public.jsonl
+images/
+.DS_Store
+push_to_git.local.sh
+git账号密码.txt
+*账号密码*
+*.ipynb_checkpoints/
+pretrain_model/Qwen3-VL-8B-Instruct/
+**/*.safetensors
+lora_ckpt/*.safetensors
