@@ -4,6 +4,9 @@ submits/
 logs/
 *.pyc
 infer_public.jsonl
+train.jsonl
+valid.jsonl
+outputs/
 images/**/*.png
 images/**/*.jpg
 images/**/*.jpeg
