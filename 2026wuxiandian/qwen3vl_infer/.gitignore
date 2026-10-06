@@ -4,8 +4,10 @@ submits/
 logs/
 *.pyc
 infer_public.jsonl
+inferB.jsonl
 train.jsonl
 valid.jsonl
+spec_png/
 outputs/
 images/**/*.png
 images/**/*.jpg
