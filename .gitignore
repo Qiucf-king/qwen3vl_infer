@@ -4,7 +4,10 @@ submits/
 logs/
 *.pyc
 infer_public.jsonl
-images/
+images/**/*.png
+images/**/*.jpg
+images/**/*.jpeg
+!images/**/*.md
 .DS_Store
 push_to_git.local.sh
 git账号密码.txt
