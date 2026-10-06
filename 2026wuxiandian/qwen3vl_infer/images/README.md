@@ -24,4 +24,13 @@ export OUT=./submits/inferB_submit.jsonl
 bash infer.sh
 ```
 
+## 训练图（build_sft_jsonl.py 生成）
+
+```
+images/train/<stem>.png
+images/valid/<stem>.png
+```
+
+对应 jsonl：`"images": ["images/train/<stem>.png"]`
+
 每张图是四节点 2x2 mosaic 频谱图。不要用绝对路径。
