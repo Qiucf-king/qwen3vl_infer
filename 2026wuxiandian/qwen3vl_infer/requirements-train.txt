@@ -1,0 +1,5 @@
+# 训练额外依赖（在 requirements.txt 之上）
+-r requirements.txt
+ms-swift>=4.5.0
+datasets
+sentencepiece
