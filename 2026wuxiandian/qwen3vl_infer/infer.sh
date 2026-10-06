@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# 纯推理：base + LoRA ckpt -> 提交 jsonl（ENU 4 位小数）
+# 纯推理：解析模型输出 -> 官方提交 jsonl（sample_id + drones，ENU 4 位小数）
+# 提交文件：${OUT:-./submits/infer_submit.jsonl}
+# 原始文本：${RAW:-./submits/infer_raw.jsonl}（仅排查用）
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
@@ -33,4 +35,6 @@ fi
 
 echo "[infer] ${cmd[*]}"
 echo "[infer] log=$log"
+echo "[infer] submit_out=$OUT"
 "${cmd[@]}" 2>&1 | tee "$log"
+echo "[infer] done submit=$OUT raw=$RAW"
