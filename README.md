@@ -7,15 +7,19 @@
   pretrain_model/
     Qwen3-VL-8B-Instruct/          # 官方基座，约 16GB，不要 git
   2026wuxiandian/
-    qwen3vl_infer/                 # 在这里跑推理
+    qwen3vl_infer/                 # 在这里跑推理 / 训练
       run_infer_submit.py          # 推理 + 解析成提交 jsonl
       infer.sh
+      build_sft_jsonl.py           # 官方 train -> SFT jsonl
+      train_sft.sh                 # 开启 ms-swift LoRA
       requirements.txt
+      requirements-train.txt
       lora_ckpt/                   # 百度网盘 LoRA
       infer_public.jsonl           # 当前 A 榜；换 B 榜换成对应 jsonl
+      train.jsonl / valid.jsonl    # 由 build_sft_jsonl.py 生成，不入库
       images/
         infer/                     # A 榜图；B 榜见下文
-          00000000_xxxxxxxx.png
+        train/ valid/              # 训练图（脚本生成）
       submits/
         infer_submit.jsonl         # 提交文件（脚本自动写出）
 ```
@@ -121,3 +125,67 @@ export DATASET=./infer_public.jsonl
 export OUT=./submits/infer_submit.jsonl
 bash infer.sh
 ```
+
+## 6. 把官方 train 转成训练数据
+
+官方 `train/` 只有 `label/*_label.json` 和 IQ，**没有**推理用的 2x2 mosaic png。  
+SFT 用的图必须和推理同一套：四节点 mosaic，文件名 `<stem>.png`，例如 `00000002_e149d585.png` 对应 `00000002_e149d585_label.json`。
+
+把 mosaic 放到一个目录（例如 `./spec_png/`），然后：
+
+```bash
+cd 2026wuxiandian/qwen3vl_infer
+pip install -r requirements-train.txt
+
+python build_sft_jsonl.py \
+  --labels-dir /path/to/train/label \
+  --spec-dir ./spec_png \
+  --val-ratio 0.2 \
+  --seed 42 \
+  --size 512
+```
+
+会写出：
+
+- `train.jsonl` / `valid.jsonl`（assistant 为 4 位小数 ENU JSON）
+- `images/train/*.png`、`images/valid/*.png`（默认 512×512）
+
+若已有加工好的 `annotations/train.json` + `valid.json`：
+
+```bash
+python build_sft_jsonl.py \
+  --train-ann /path/to/annotations/train.json \
+  --valid-ann /path/to/annotations/valid.json \
+  --ann-images /path/to/images \
+  --size 512
+```
+
+jsonl 一行结构：
+
+```json
+{
+  "sample_id": 2,
+  "images": ["images/train/00000002_e149d585.png"],
+  "messages": [
+    {"role": "system", "content": "..."},
+    {"role": "user", "content": "<image>..."},
+    {"role": "assistant", "content": "{\"drones\":[{\"model_id\":1,\"position_enu\":{\"e_m\":2.4766,\"n_m\":-7.7424,\"u_m\":59.9733}}]}"}
+  ]
+}
+```
+
+## 7. 开启 ms-swift 训练
+
+```bash
+cd 2026wuxiandian/qwen3vl_infer
+export MODEL_PATH=../../pretrain_model/Qwen3-VL-8B-Instruct
+export DATASET=./train.jsonl
+export VAL_DATASET=./valid.jsonl
+export OUTPUT_DIR=./outputs/sft_lora
+bash train_sft.sh
+tail -f "$(ls -t logs/sft_lora_*.log | head -1)"
+```
+
+默认超参：LoRA r=16 α=32 all-linear、bf16、batch 1 × accum 8、lr=1e-4、warmup 0.05、max_length=768、`IMAGE_MAX_TOKEN_NUM=256`、每 20 step 打 log、每 200 step eval/save、最多留 5 个 ckpt。
+
+训完后把 `outputs/sft_lora/.../checkpoint-xxxx` 拷到 `lora_ckpt/`，再走上面的推理。
