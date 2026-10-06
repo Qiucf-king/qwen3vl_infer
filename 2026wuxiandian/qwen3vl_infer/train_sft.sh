@@ -25,7 +25,7 @@ if [[ ! -f "${MODEL_PATH}/config.json" ]]; then
 fi
 if [[ ! -f "$DATASET" ]]; then
   echo "[error] dataset missing: $DATASET"
-  echo "  first: python build_sft_jsonl.py --labels-dir ... --spec-dir ..."
+  echo "  first: python build_official.py train --official-dir ... --spec-dir ..."
   exit 1
 fi
 
