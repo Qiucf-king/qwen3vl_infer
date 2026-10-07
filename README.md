@@ -66,9 +66,9 @@ modelscope download --model Qwen/Qwen3-VL-8B-Instruct \
 压缩包根目录就是 `ckp_best/`，解压到 `lora_ckpt/` 下即可。
 
 ```
-链接：<填写百度网盘分享链接>
-提取码：<填写>
-文件：ckp_best.zip
+链接：https://pan.baidu.com/s/1hu_S3ouyTejlMmcOJlfcVg
+提取码：dcgn
+分享名：2026wuxiandian
 ```
 
 ## 3. 官方数据 → 输入 jsonl + 图片
