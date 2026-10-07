@@ -26,10 +26,14 @@
 <本仓库根>/
   pretrain_model/Qwen3-VL-8B-Instruct/
   2026wuxiandian/qwen3vl_infer/     # 在这里转换 / 训练 / 推理
-    build_official.py               # 官方数据 -> jsonl + 图
+    build_official.py
     train_sft.sh
-    run_infer_submit.py             # 推理并解析成提交 jsonl
+    run_infer_submit.py
     infer.sh
+    lora_ckpt/
+      ckp_best/                     # 最佳 LoRA（百度网盘下载后放到这里）
+        adapter_config.json
+        adapter_model.safetensors
 ```
 
 ```bash
@@ -49,7 +53,25 @@ modelscope download --model Qwen/Qwen3-VL-8B-Instruct \
   --local_dir ./pretrain_model/Qwen3-VL-8B-Instruct
 ```
 
-## 2. 官方数据 → 输入 jsonl + 图片
+## 2. 最佳 LoRA 权重（约 167MB）
+
+百度网盘下载 `ckp_best.zip` 后，解压到：
+
+```
+2026wuxiandian/qwen3vl_infer/lora_ckpt/ckp_best/
+  adapter_config.json
+  adapter_model.safetensors
+```
+
+压缩包根目录就是 `ckp_best/`，解压到 `lora_ckpt/` 下即可。
+
+```
+链接：<填写百度网盘分享链接>
+提取码：<填写>
+文件：ckp_best.zip
+```
+
+## 3. 官方数据 → 输入 jsonl + 图片
 
 官方包里是 `label/<stem>_label.json`（以及 IQ）。  
 模型吃的图是四节点 **2x2 mosaic**，文件名必须是 `<stem>.png`，和 label 对齐。
@@ -93,7 +115,7 @@ python build_official.py infer \
 }
 ```
 
-换 **inferB**：把官方 B 榜目录和对应 mosaic 转进去即可。
+换 **inferB**：
 
 ```bash
 python build_official.py infer \
@@ -102,9 +124,7 @@ python build_official.py infer \
   --pack inferB
 ```
 
-## 3. 训练（ms-swift）
-
-训练目标就是上面的 **assistant JSON**（ENU 四位小数，带 `position_enu`）。
+## 4. 训练（ms-swift）
 
 ```bash
 export MODEL_PATH=../../pretrain_model/Qwen3-VL-8B-Instruct
@@ -112,26 +132,23 @@ export DATASET=./train.jsonl
 export VAL_DATASET=./valid.jsonl
 export OUTPUT_DIR=./outputs/sft_lora
 bash train_sft.sh
-tail -f "$(ls -t logs/sft_lora_*.log | head -1)"
 ```
 
 默认：LoRA r=16 α=32 all-linear、bf16、batch 1×accum 8、lr=1e-4、warmup 0.05、max_length=768、`IMAGE_MAX_TOKEN_NUM=256`、每 20 step log、每 200 step eval/save、最多留 5 个 ckpt。
 
-训完把 `outputs/sft_lora/.../checkpoint-xxxx` 拷到 `lora_ckpt/`。
+训完把最佳 checkpoint 拷到 `lora_ckpt/ckp_best/`。
 
-## 4. 推理 → 提交 jsonl
+## 5. 推理 → 提交 jsonl
 
-`run_infer_submit.py` 解析模型 JSON，写成**官方交榜格式**（扁平 `e_m/n_m/u_m`，四位小数）：
+`run_infer_submit.py` 解析模型 JSON，写成官方交榜格式（扁平 `e_m/n_m/u_m`，四位小数）：
 
 ```json
 {"sample_id":0,"drones":[{"model_id":1,"e_m":2.4766,"n_m":-7.7424,"u_m":59.9733}]}
 ```
 
-和训练标签是同一套字段，只是交榜不要嵌套 `position_enu`，并带上 `sample_id`。
-
 ```bash
 pip install -r requirements.txt
-export CKPT=./lora_ckpt
+export CKPT=./lora_ckpt/ckp_best
 export DATASET=./infer_public.jsonl
 export OUT=./submits/infer_submit.jsonl
 bash infer.sh
@@ -141,8 +158,8 @@ bash infer.sh
 |------|------|------|
 | `OUT` | `./submits/infer_submit.jsonl` | **交榜文件** |
 | `RAW` | `./submits/infer_raw.jsonl` | 模型原文，排查用 |
-| `DATASET` | `./infer_public.jsonl` | 上一步生成的推理 jsonl |
-| `CKPT` | 必填 | LoRA 目录 |
+| `DATASET` | `./infer_public.jsonl` | 推理 jsonl |
+| `CKPT` | 必填 | 推荐 `./lora_ckpt/ckp_best` |
 
 B 榜：
 
@@ -150,14 +167,4 @@ B 榜：
 export DATASET=./inferB.jsonl
 export OUT=./submits/inferB_submit.jsonl
 bash infer.sh
-```
-
-## 5. 我们自己的 LoRA（约 166MB）
-
-放到 `lora_ckpt/`（`adapter_config.json` + `adapter_model.safetensors`）。
-
-```
-链接：<填写百度网盘分享链接>
-提取码：<填写>
-文件说明：<填写，例如 pseudo77 checkpoint-1800 LoRA>
 ```
