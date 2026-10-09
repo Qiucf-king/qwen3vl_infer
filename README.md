@@ -76,6 +76,8 @@ modelscope download --model Qwen/Qwen3-VL-8B-Instruct \
 官方包里是 `label/<stem>_label.json`（以及 IQ）。  
 模型吃的图是四节点 **2x2 mosaic**，文件名必须是 `<stem>.png`，和 label 对齐。
 
+**若只有官方 `*_iq.npz`、还没有 mosaic PNG**：先用本仓库 [`iq_to_mosaic_png/`](./iq_to_mosaic_png/) 生成 512×512 拼图（与训练一致），再跑下面的 `build_official.py`。
+
 | 官方 | label 内容 | 本仓库产出 |
 |------|------------|------------|
 | `train/` | `drones` + `allowlist` | `train.jsonl` `valid.jsonl` + `images/train` `images/valid`（带 assistant JSON） |
@@ -168,3 +170,29 @@ export DATASET=./inferB.jsonl
 export OUT=./submits/inferB_submit.jsonl
 bash infer.sh
 ```
+
+## IQ → 四节点 2×2 频谱拼图 PNG
+
+训练/推理使用的 mosaic 图由官方 `*_iq.npz` 生成。完整复现脚本见仓库目录：
+
+[`iq_to_mosaic_png/`](./iq_to_mosaic_png/)
+
+```bash
+pip install -r iq_to_mosaic_png/requirements.txt
+
+# 单文件 → 512×512 <stem>.png
+python iq_to_mosaic_png/iq_npz_to_mosaic_png.py \
+  --npz /path/to/xxxx_iq.npz \
+  -o ./xxxx.png
+
+# 按官方 index.csv 批量
+python iq_to_mosaic_png/iq_npz_to_mosaic_png.py \
+  --dataset-root /path/to/test_public \
+  --out-dir ./mosaic_png
+```
+
+关键参数（与训练一致）：STFT `nperseg=min(1024,max(32,len//100))`、`noverlap=nperseg//2`、
+`fftshift`、`10*log10`、P5/P95 归一化、Viridis、单节点 560→拼 1120→LANCZOS 缩到 512；缺失节点全黑。
+
+对照样例（本地脚本 vs 线上训练图，已验证像素级一致）：
+[`iq_to_mosaic_png/host_compare/`](./iq_to_mosaic_png/host_compare/)
